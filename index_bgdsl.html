@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<head>
+    <meta charset="utf-8">
+    <title>Chart</title>
+    <link href="css/bootstrap.min.css" rel="stylesheet">
+    <link href="css/global.css" rel="stylesheet">
+</head>
+<body>
+<style>
+    html, body {
+        height: 100%;
+    }
+
+    .region {
+        font-size: 16px;
+        font-weight: bold;
+        color: #84D3ED;
+    }
+
+    .region li {
+        cursor: pointer;
+    }
+
+    .region li[data-level='1'] {
+        font-size: 1.2em;
+    }
+
+    .region .selected {
+        color: #FFFFFF;
+    }
+
+</style>
+    <div id="metapage_01" class="row" style="height: 200px;">
+        <div id="widget_0101" class="col-xs-9" style="height: 100%">
+                <div class="chart" style="width:100%;height:100%;"></div>
+        </div>
+        <div id="widget_0102" class="col-xs-3" style="height: 100%">
+                <div class="region">
+                    <ul>
+                        <li data-level="2" data-region-id="0">京津冀</li>
+                        <li data-level="3" data-region-id="1">长江经济带</li>
+                        <li data-level="1" data-region-id="2"> 总署</li>
+                        <li data-level="2" data-region-id="3">“泛珠”区域</li>
+                        <li data-level="2" data-region-id="4">东北区域</li>
+                        <li data-level="3" data-region-id="5">丝绸之路经济带</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+        <!--清除浮动效果-->
+        <div class="clear"></div>
+    </div>
+<script src="js/jquery-1.11.2.min.js"></script>
+<script src="js/echarts-all.js"></script>
+<script type="text/javascript" src="js/global.js"></script>
+<script type="text/javascript" src="js/theme_custom.js"></script>
+<script>    //metapage_01
+$(function () {
+    var contextPath = "<%=contextPath%>";
+    var echart_0101 = echarts.init(document.getElementById("widget_0101").querySelector(".chart"), theme_custom);
+    var option = {
+
+    };
+    var regionData = {
+        data: [
+            {
+                id: "0",
+                level: "2",
+                name: "京津冀",
+                INTERNALORG_ID: 112001
+            },
+            {
+                id: "1",
+                level: "3",
+                name: "长江经济带",
+                INTERNALORG_ID: 112002
+            },
+            {
+                id: "2",
+                level: "1",
+                name: "总署",
+                INTERNALORG_ID: 112000
+            },
+            {
+                id: "3",
+                level: "2",
+                name: "“泛珠”区域",
+                INTERNALORG_ID: 112003
+            },
+            {
+                id: "4",
+                level: "2",
+                name: "东北区域",
+                INTERNALORG_ID: 112004
+            },
+            {
+                id: "5",
+                level: "3",
+                name: "丝绸之路经济带",
+                INTERNALORG_ID: 112005
+            }
+        ]
+    };
+
+    var sqlParams = {
+        "CATEG_NAME": "DIM_YEAR_ID",
+        "TABLE_DIM": "v_dim_date",
+        "CATEG_ID_DIM": "STAT_CYCLE",
+        "CATEG_ID_FACT": "STAT_CYCLE",
+        "TABLE_FACT": "DM_OPERATION",
+        "PERIOD": "05",
+        "SQL_STAT_CYCLE": "1=1",
+        "SQL_DIM_INTERNALORG_ID": "DIM_INTERNALORG_ID='$" + "{INTERNALORG_ID}'",
+        "SQL_DIM_ID_1": "DIM_ID1=0 and STAT_CYCLE= to_char($" + "{sysdate}, 'YYYYMM')",
+        "IDX_ID_1": "1002001010026",
+        "SQL_DIM_ID_2": "DIM_ID1=0 and STAT_CYCLE= to_char(add_months($" + "{sysdate}, -12), 'YYYYMM')",
+        "IDX_ID_2": "1002001010026"
+    };
+    var strSqlParams = JSON.stringify(sqlParams);
+    while(strSqlParams.indexOf("$" + "{sysdate}") != -1){
+        strSqlParams = strSqlParams.replace("$\{sysdate\}", "sysdate");
+    }
+
+    function queryChartData(INTERNALORG_ID){
+
+        while(strSqlParams.indexOf("$" + "{INTERNALORG_ID}") != -1){
+            strSqlParams = strSqlParams.replace("$\{INTERNALORG_ID\}", INTERNALORG_ID);
+        }
+        var datas = {
+            chartMoudleCode: "column_2series",
+            sqlParams: strSqlParams
+        };
+        $.ajax({
+            type: "POST",
+            url: contextPath + '/' + generateChartDataURL,
+            dataType: "json",
+            data: datas,
+            success: function (msg) {
+                if(msg.flag == '1'){
+                    var option_data = eval('(' + msg.chartOption + ')');
+                    option_data = copyJSONAtoB_noArrayNull(option, option_data);
+                    echart_0101.setOption(option_data);
+                } else {
+                    console.log('请求数据为空或请求失败！');
+                }
+            },
+            error: function (xhr, txt, err) {
+                console.log(xhr.status + ":" + txt + ", " + err.message);
+            }
+        });
+    }
+
+    $(".region li").bind("select", function () {
+        var id = $(this).attr("data-region-id");
+        var INTERNALORG_ID = regionData.data[id].INTERNALORG_ID;
+        queryChartData(INTERNALORG_ID);
+    });
+    $(".region li").click(function () {
+        $(this).siblings(".selected").removeClass("selected");
+        $(this).addClass("selected");
+        $(this).trigger("select");
+    });
+
+    $(".region li[data-level='1']").click();
+    /*    (function () {
+     var i = 0;
+     var len = $(".region li").length;
+     setInterval(function () {
+     $(".region li").eq(i % len).click();
+     i++;
+     }, 2000);
+     })();*/
+});
+</script>
+</body>
+</html>
